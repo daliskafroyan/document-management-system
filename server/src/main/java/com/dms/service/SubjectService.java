@@ -1,5 +1,6 @@
 package com.dms.service;
 import com.dms.dto.GetAllSubjectEager;
+import com.dms.dto.UpdateSubjectRequest;
 import com.dms.exception.SubjectNotFoundException;
 import com.dms.model.Subject;
 import com.dms.repository.SubjectRepository;
@@ -7,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -54,5 +56,24 @@ public class SubjectService {
                                 .name(folder.getName())
                                 .build()).collect(Collectors.toList()))
                 .build();
+    }
+
+    public Subject updateSubject(UpdateSubjectRequest updateSubjectRequest) {
+        Subject subject = validateAndGetSubject(updateSubjectRequest.getId().toString());
+
+        Subject parentSubject = null;
+        if (updateSubjectRequest.getParentSubjectId() != null) {
+            Optional<Subject> optionalParentSubject = subjectRepository.findById(String.valueOf(updateSubjectRequest.getParentSubjectId()));
+            if (optionalParentSubject.isPresent()) {
+                parentSubject = optionalParentSubject.get();
+            } else {
+                throw new IllegalArgumentException("Parent subject not found");
+            }
+        }
+
+        subject.setName(updateSubjectRequest.getName());
+        subject.setParentSubject(parentSubject);
+
+        return subjectRepository.save(subject);
     }
 }

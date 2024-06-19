@@ -1,189 +1,391 @@
 <template>
-    <el-container class="home-container">
-        <el-aside style="width: 217px;">
-            <el-row style="height: 100vh;">
-                <el-tree style="width: 1200px" :data="treeData" :props="defaultProps" @node-click="handleNodeClick" />
-            </el-row>
-        </el-aside>
-        <el-container class="main-container">
-            <el-header>
-                <div class="header_left">
-                    <span style="font-weight: bold;">&nbsp;Document Management System</span>
-                </div>
-                <div class="header_right">
-                    <a href="#" @click.prevent="logout">Logout</a>
-                </div>
-            </el-header>
-            <el-main>
-                <el-table :data="tableData" border style="width: 100%">
-                    <el-table-column prop="id" label="id" />
-                    <el-table-column prop="name" label="Record Name" width="180" />
-                </el-table>
-            </el-main>
-        </el-container>
-    </el-container>
+    <Dialog v-model:visible="isEditRecordDialogOpened" :style="{ width: '450px' }" header="Edit Record" :modal="true">
+        <div class="flex flex-col gap-6 p-fluid">
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="record.name" required="true" autofocus class="w-full"
+                    :invalid="submittedRecord && !record" />
+                <small v-if="submittedRecord && !record" class="text-red-500">Record Name is required.</small>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" text @click="closeEditRecordDialog" />
+            <Button label="Save" @click="saveRecord" />
+        </template>
+    </Dialog>
+    <div class="app-viewport inspect_">
+
+        <!-- app-header -->
+        <div class="app-header">
+            <div class="app-branding">
+                <h1 class="app-brand">Document Management System</h1>
+            </div>
+            <div class="app-nav">
+                <Button type="button" icon="pi pi-power-off" @click="logout" aria-haspopup="true"
+                    aria-controls="overlay_menu" />
+            </div>
+        </div>
+        <!-- end app-header -->
+
+        <!-- app-main -->
+        <div class="app-main">
+            <Message closable v-if="tableData.length === 0">No Record Available</Message>
+            <DataTable v-else :value="tableData" showGridlines tableStyle="min-width: 50rem">
+                <Column field="id" header="ID" />
+                <Column field="name" header="Nama" />
+                <Column :exportable="false" style="width: 8rem">
+                    <template #body="slotProps">
+                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editRecord(slotProps.data)" />
+                        <Button icon="pi pi-trash" outlined rounded severity="danger"
+                            @click="confirmDeleteRecord(slotProps.data)" />
+                    </template>
+                </Column>
+            </DataTable>
+
+        </div>
+        <!-- end app-main -->
+
+        <!-- app-sidebar -->
+        <div class="app-sidebar">
+            <div class="card flex justify-center">
+                <Tree @nodeSelect="onNodeSelect" v-model:selectionKeys="selectedKey" selectionMode="single"
+                    :value="nodes" class="w-full md:w-[30rem]"></Tree>
+            </div>
+
+        </div>
+        <!-- app-sidebar -->
+
+    </div>
 </template>
 
 <script setup lang="ts">
-import type Node from 'element-plus/es/components/tree/src/model/node';
-import { ref, onMounted, toRaw } from 'vue';
-import { useRouter } from 'vue-router';
-import { getAllEagerSubjects, getFolderDetails, type GetAllEagerSubjectResponse } from '@/api/app';
+import { ref, onMounted } from 'vue';
+import { getAllEagerSubjects, getFolderDetails, putEditRecord, type GetAllEagerSubjectResponse } from '@/api/app';
+import { useToast } from 'primevue/usetoast';
 
-const router = useRouter();
+const toast = useToast()
 
-interface Tree {
-    label: string;
-    children?: Tree[];
-    id?: string
+interface Subject {
+    id: number;
+    name: string;
+    parentSubjectId: number | null;
+    childSubjects: Subject[];
+    folders: Folder[];
 }
 
-const treeData = ref<Tree[]>([]);
-const defaultProps = {
-    label: 'label',
-    children: 'children',
+interface Folder {
+    id: number;
+    name: string;
+}
+
+interface TreeNode {
+    key: string;
+    label: string;
+    data: number;
+    icon: string;
+    children: TreeNode[];
+}
+
+const editRecord = (prod: { id: number, name: string }) => {
+    record.value = prod;
+    isEditRecordDialogOpened.value = true;
+};
+const confirmDeleteRecord = (prod) => {
+    // product.value = prod;
+    // deleteProductDialog.value = true;
+};
+const saveRecord = () => {
+    submittedRecord.value = true;
+    putEditRecord(record.value)
+        .then(() => {
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Edit Record Success', life: 3000 });
+            record.value = { id: 0, name: '' };
+            isEditRecordDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Edit Record Error', life: 3000 });
+        });
 };
 
-const tableData = ref<{ id: number, name: string }[]>([])
+const closeEditRecordDialog = () => {
+    isEditRecordDialogOpened.value = false;
+    submittedRecord.value = false;
+};
 
-// const tableData = [
-//     {
-//         date: '2016-05-03',
-//         name: 'Tom',
-//         address: 'No. 189, Grove St, Los Angeles',
-//     },
-//     {
-//         date: '2016-05-02',
-//         name: 'Tom',
-//         address: 'No. 189, Grove St, Los Angeles',
-//     },
-//     {
-//         date: '2016-05-04',
-//         name: 'Tom',
-//         address: 'No. 189, Grove St, Los Angeles',
-//     },
-//     {
-//         date: '2016-05-01',
-//         name: 'Tom',
-//         address: 'No. 189, Grove St, Los Angeles',
-//     },
-// ]
+const isEditRecordDialogOpened = ref(false);
+const record = ref<{ id: number, name: string }>({ id: 0, name: '' });
+const submittedRecord = ref(false);
+const nodes = ref<TreeNode[]>([]);
 
-const handleNodeClick = async (data: Tree) => {
-    console.log(data);
-    if (data.id) {
+const tableData = ref<{ id: number; name: string }[]>([]);
+const selectedKey = ref(null);
+
+const isFolder = (str: string): boolean => {
+    return str.trim().endsWith('pi-folder');
+}
+
+const onNodeSelect = async (node: any) => {
+    if (isFolder(node.icon)) {
         try {
-            const response = await getFolderDetails(parseInt(data.id));
-            tableData.value = response.data.records.map(record => ({
+            const response = await getFolderDetails(parseInt(node.data));
+            const val = response.data.records.map(record => ({
                 id: record.id,
                 name: record.name,
             }));
+
+            tableData.value = val
+
         } catch (error) {
             console.error('Failed to fetch subjects:', error);
         }
+    } else {
+        tableData.value = []
     }
 };
 
+const convertToTreeNodes = (subjects: Subject[]): TreeNode[] => {
+    const buildTree = (subject: Subject, parentKey: string): TreeNode => {
+        const key = `${parentKey}p${subject.id}`;
+        const children: TreeNode[] = [];
 
-const mapNode = (node: GetAllEagerSubjectResponse): Tree => {
-    const children: Tree[] = [];
+        subject.childSubjects.forEach(child => {
+            children.push(buildTree(child, key));
+        });
 
-    if (node.childSubjects) {
-        children.push(...node.childSubjects.map(mapNode));
-    }
+        subject.folders.forEach(folder => {
+            children.push({
+                key: `${key}f${folder.id}`,
+                label: folder.name,
+                data: folder.id,
+                icon: 'pi pi-fw pi-folder',
+                children: []
+            });
+        });
 
-    if (node.folders) {
-        children.push(...node.folders.map(folder => ({
-            id: folder.id.toString(),
-            label: folder.name,
-        })));
-    }
-
-    return {
-        label: node.name,
-        children: children.length > 0 ? children : undefined,
+        return {
+            key,
+            label: subject.name,
+            data: subject.id,
+            icon: 'pi pi-fw pi-box',
+            children
+        };
     };
-};
 
-const convertToTreeData = (data: GetAllEagerSubjectResponse[]): Tree[] => {
-    return data.map(mapNode);
-};
+    return subjects.map(subject => buildTree(subject, ''));
+}
+
 
 onMounted(async () => {
     try {
         const response = await getAllEagerSubjects();
-        treeData.value = convertToTreeData(response.data);
+        nodes.value = convertToTreeNodes(response.data)
     } catch (error) {
         console.error('Failed to fetch subjects:', error);
     }
 });
 
-const currUser = ref({});
 
 const logout = () => {
-    // Implement logout logic
+    localStorage.removeItem('token');
 };
+
 </script>
 
 <style scoped>
-.is-folder>.el-tree-node__content {
-    color: #000;
+.app-viewport {
+    height: 100%;
+    margin: 0;
 }
 
-.home-container {
-    height: 100vh;
+.app-viewport.inspect * {
+    border: 1px solid red;
+}
+
+/* Grid Layout */
+
+/* .app-viewport * {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+} */
+
+.app-viewport {
+    display: grid;
+    grid-template-columns: var(--app-sidebar-width) 1fr;
+    grid-template-rows: var(--app-header-height) 1fr;
+    grid-template-areas:
+        "AppSidebar AppHeader"
+        "AppSidebar AppMain";
+}
+
+.app-header {
+    grid-area: AppHeader;
+    margin-left: calc(var(--app-sidebar-width) * -1);
+    z-index: 2;
+}
+
+.app-nav,
+.app-header,
+.app-branding {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-items: flex-start;
+    color: #fff;
 }
 
-.main-container {
+.app-nav {
+    padding: 0 var(--app-padding);
+    flex: auto;
+    justify-content: flex-end;
+}
+
+.app-branding {
+    width: var(--app-sidebar-width);
+    padding: 0 var(--app-padding);
+}
+
+.app-main {
+    grid-area: AppMain;
+    overflow-y: auto;
+    z-index: 1;
+    height: 100vh;
+    padding: var(--app-padding);
+}
+
+.app-sidebar {
+    display: grid;
+    grid-area: AppSidebar;
+    margin-top: var(--app-header-height);
+    overflow: auto;
+    z-index: 1;
+}
+
+.app-sidebar-menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    flex: 1;
 }
 
-.el-header {
-    line-height: 60px;
+.app-sidebar-menu>li>a {
     display: flex;
-    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-items: start;
+    padding: 5px 0;
 }
 
-.el-header .header_left {
-    font-size: 22px;
+.app-sidebar-menu>li>a>.menu-icon {
+    margin-left: 15px;
 }
 
-.header_left img {
-    margin-top: -5px;
-    vertical-align: middle;
-}
-
-.el-header .header_right {
-    padding-right: 20px;
-}
-
-.header_right a {
+.app-sidebar-menu>li>a>span {
     margin-left: 10px;
 }
 
-.el-menu {
-    height: 100%;
+/* Color / Presentation Only */
+
+.placeholder {
+    display: block;
+    height: 1200px;
+    background: rgba(0, 0, 0, 0.05);
 }
 
-.el-main {
-    border-top: 1px solid #ccc;
-    border-bottom: 1px solid #ccc;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+.placeholder:after {
+    content: " ";
 }
 
-.breadcrumb {
-    margin-bottom: 20px;
+.app-viewport {
+    background: #e9ecef;
 }
 
-.el-footer {
-    text-align: center;
-    font-size: 12px;
-    height: 40px;
-    line-height: 40px;
+.app-header,
+.app-sidebar-header {
+    background: #202020;
+}
+
+.app-sidebar {
+    background: var(--p-content-background);
+    font-size: 15px;
+}
+
+.app-sidebar-menu>li>a {
+    text-decoration: none;
+    color: #fff;
+    opacity: 0.5;
+}
+
+.app-sidebar-menu>li.active>a,
+.app-sidebar-menu>li>a:hover {
+    opacity: 1;
+}
+
+.app-icon {
+    font-size: 28px;
+    margin-right: 5px;
+    font-weight: 500;
+}
+
+.app-brand {
+    font-size: 130%;
+    font-weight: 500;
+    line-height: 1.2rem;
+}
+
+.app-nav-toggle,
+.app-brand {
+    color: #fff;
+}
+
+/* Responsive */
+
+@media screen and (max-width: 768px) {
+    .app-viewport {
+        grid-template-columns: var(--app-sidebar-min-width) 1fr;
+    }
+
+    .app-header {
+        margin-left: calc(var(--app-sidebar-min-width) * -1);
+    }
+
+    .app-icon {
+        font-size: 36px;
+        margin: 0;
+    }
+
+    .app-branding {
+        width: var(--app-sidebar-min-width);
+        padding: 0;
+        justify-content: center;
+    }
+
+    .app-brand {
+        display: none;
+    }
+
+    .app-sidebar-menu>li {
+        width: var(--app-sidebar-min-width);
+    }
+
+    .app-sidebar-menu>li>a {
+        display: block;
+        text-align: center;
+    }
+
+    .app-sidebar-menu>li>a>span {
+        display: none;
+    }
+
+    .app-sidebar-menu>li>a>.menu-icon {
+        margin: 0;
+        padding: 0;
+        font-size: 30px;
+    }
 }
 </style>

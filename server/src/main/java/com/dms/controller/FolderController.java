@@ -3,6 +3,7 @@ package com.dms.controller;
 import com.dms.dto.CreateFolderRequest;
 import com.dms.dto.GetAllFolderResponse;
 import com.dms.dto.GetFolderDetailsResponse;
+import com.dms.dto.UpdateFolderRequest;
 import com.dms.model.Folder;
 import com.dms.model.Subject;
 import com.dms.repository.FolderRepository;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -75,5 +77,16 @@ public class FolderController {
     @GetMapping("/{id}")
     public GetFolderDetailsResponse getFolderDetails(@PathVariable Long id) {
         return folderService.getFolderDetails(id);
+    }
+
+    @Operation(security = {@SecurityRequirement(name = BEARER_KEY_SECURITY_SCHEME)})
+    @PutMapping("/{id}")
+    public ResponseEntity<GetAllFolderResponse> updateFolder(@AuthenticationPrincipal CustomUserDetails currentUser,
+                                                             @PathVariable Long id,
+                                                             @Valid @RequestBody UpdateFolderRequest updateFolderRequest) {
+        updateFolderRequest.setId(id);
+        Folder updatedFolder = folderService.updateFolder(updateFolderRequest);
+        GetAllFolderResponse response = convertToDTO(updatedFolder);
+        return ResponseEntity.ok(response);
     }
 }

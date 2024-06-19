@@ -5,6 +5,7 @@ import com.dms.dto.GetAllSubjectEager;
 import com.dms.dto.GetAllSubjectResponse;
 import com.dms.dto.GetAllSubjectResponse.ChildSubjectResponse;
 import com.dms.dto.GetAllSubjectResponse.FolderResponse;
+import com.dms.dto.UpdateSubjectRequest;
 import com.dms.model.Subject;
 import com.dms.model.Folder;
 import com.dms.repository.SubjectRepository;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,7 +57,7 @@ public class SubjectController {
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/{id}")
     public GetAllSubjectResponse getSubjectDetails(@PathVariable Long id) {
-        Subject subject = subjectService.validateAndGetSubject(String.valueOf(id));
+        Subject subject = subjectService.validateAndGetSubject(id.toString());
         return convertToDTO(subject);
     }
 
@@ -124,8 +126,19 @@ public class SubjectController {
     @Operation(security = {@SecurityRequirement(name = BEARER_KEY_SECURITY_SCHEME)})
     @DeleteMapping("/{id}")
     public void deleteSubject(@PathVariable Long id) {
-        Subject subject = subjectService.validateAndGetSubject(String.valueOf(id));
+        Subject subject = subjectService.validateAndGetSubject(id.toString());
         subjectRepository.delete(subject);
+    }
+
+    @Operation(security = {@SecurityRequirement(name = BEARER_KEY_SECURITY_SCHEME)})
+    @PutMapping("/{id}")
+    public ResponseEntity<GetAllSubjectResponse> updateSubject(@AuthenticationPrincipal CustomUserDetails currentUser,
+                                                               @PathVariable Long id,
+                                                               @Valid @RequestBody UpdateSubjectRequest updateSubjectRequest) {
+        updateSubjectRequest.setId(id);
+        Subject updatedSubject = subjectService.updateSubject(updateSubjectRequest);
+        GetAllSubjectResponse response = convertToDTO(updatedSubject);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(security = {@SecurityRequirement(name = BEARER_KEY_SECURITY_SCHEME)})

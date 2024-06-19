@@ -32,7 +32,7 @@ export function getSubjectDetails(id: number) {
 }
 
 
-export interface GetAllEagerSubjectResponse {
+export type GetAllEagerSubjectResponse = {
     id: number;
     name: string;
     parentSubjectId: number | null;
@@ -62,7 +62,20 @@ export type GetFolderDetailsResponse = {
 
 export function getFolderDetails(id: number) {
     return request<GetFolderDetailsResponse>({
-        url: `/api/folders/${id}`,
+        url: `api/folders/${id}`,
         method: "GET",
     });
+}
+
+export type PutEditRecord = {
+    id: number;
+    name: string;
+}
+
+export function putEditRecord(data: PutEditRecord) {
+    return request({
+        url: `api/records/${data.id}`,
+        method: 'PUT',
+        data
+    })
 }

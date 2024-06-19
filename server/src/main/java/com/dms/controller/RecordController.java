@@ -1,6 +1,7 @@
 package com.dms.controller;
 
 import com.dms.dto.CreateRecordRequest;
+import com.dms.dto.UpdateRecordRequest;
 import com.dms.dto.GetAllRecordsResponse;
 import com.dms.model.Record;
 import com.dms.model.Folder;
@@ -68,5 +69,16 @@ public class RecordController {
     public void deleteRecord(@PathVariable Long id) {
         Record record = recordService.validateAndGetRecord(id);
         recordRepository.delete(record);
+    }
+
+    @Operation(security = {@SecurityRequirement(name = BEARER_KEY_SECURITY_SCHEME)})
+    @PutMapping("/{id}")
+    public ResponseEntity<GetAllRecordsResponse> updateRecord(@AuthenticationPrincipal CustomUserDetails currentUser,
+                                                              @PathVariable Long id,
+                                                              @Valid @RequestBody UpdateRecordRequest updateRecordRequest) {
+        updateRecordRequest.setId(id);
+        Record updatedRecord = recordService.updateRecord(updateRecordRequest);
+        GetAllRecordsResponse response = convertToDTO(updatedRecord);
+        return ResponseEntity.ok(response);
     }
 }

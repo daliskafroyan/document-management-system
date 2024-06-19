@@ -1,7 +1,9 @@
 package com.dms.service;
 
 import com.dms.dto.GetFolderDetailsResponse;
+import com.dms.dto.UpdateFolderRequest;
 import com.dms.model.Folder;
+import com.dms.model.Subject;
 import com.dms.repository.FolderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 public class FolderService {
 
     private final FolderRepository folderRepository;
+    private final SubjectService subjectService;
 
     public List<Folder> getAllFolders() {
         return folderRepository.findAll();
@@ -48,6 +51,16 @@ public class FolderService {
                 .id(record.getId())
                 .name(record.getName())
                 .build();
+    }
+
+    public Folder updateFolder(UpdateFolderRequest updateFolderRequest) {
+        Folder folder = validateAndGetFolder(updateFolderRequest.getId());
+        Subject subject = subjectService.validateAndGetSubject(String.valueOf(updateFolderRequest.getSubjectId()));
+
+        folder.setName(updateFolderRequest.getName());
+        folder.setSubject(subject);
+
+        return folderRepository.save(folder);
     }
 
     public Folder validateAndGetFolder(Long id) {
