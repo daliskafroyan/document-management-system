@@ -2,6 +2,7 @@ package com.dms.controller;
 
 import com.dms.dto.CreateFolderRequest;
 import com.dms.dto.GetAllFolderResponse;
+import com.dms.dto.GetFolderDetailsResponse;
 import com.dms.model.Folder;
 import com.dms.model.Subject;
 import com.dms.repository.FolderRepository;
@@ -67,5 +68,12 @@ public class FolderController {
     public void deleteFolder(@PathVariable Long id) {
         Folder folder = folderService.validateAndGetFolder(id);
         folderRepository.delete(folder);
+    }
+
+    @Operation(security = {@SecurityRequirement(name = BEARER_KEY_SECURITY_SCHEME)})
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/{id}")
+    public GetFolderDetailsResponse getFolderDetails(@PathVariable Long id) {
+        return folderService.getFolderDetails(id);
     }
 }

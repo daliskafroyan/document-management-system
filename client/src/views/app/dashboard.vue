@@ -15,7 +15,10 @@
                 </div>
             </el-header>
             <el-main>
-                <router-view></router-view>
+                <el-table :data="tableData" border style="width: 100%">
+                    <el-table-column prop="createdAt" label="Date" width="180" />
+                    <el-table-column prop="address" label="Address" />
+                </el-table>
             </el-main>
         </el-container>
     </el-container>
@@ -40,6 +43,29 @@ const defaultProps = {
     children: 'children',
 };
 
+const tableData = [
+    {
+        date: '2016-05-03',
+        name: 'Tom',
+        address: 'No. 189, Grove St, Los Angeles',
+    },
+    {
+        date: '2016-05-02',
+        name: 'Tom',
+        address: 'No. 189, Grove St, Los Angeles',
+    },
+    {
+        date: '2016-05-04',
+        name: 'Tom',
+        address: 'No. 189, Grove St, Los Angeles',
+    },
+    {
+        date: '2016-05-01',
+        name: 'Tom',
+        address: 'No. 189, Grove St, Los Angeles',
+    },
+]
+
 const handleNodeClick = (data: Tree) => {
     console.log(data);
 };
@@ -53,6 +79,7 @@ const mapNode = (node: GetAllEagerSubjectResponse): Tree => {
 
     if (node.folders) {
         children.push(...node.folders.map(folder => ({
+            id: folder.id.toString(),
             label: folder.name,
         })));
     }
