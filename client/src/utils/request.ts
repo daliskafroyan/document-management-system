@@ -1,3 +1,4 @@
+import router from "@/router";
 import axios from "axios";
 import type { AxiosInstance } from "axios";
 import { ElMessage } from "element-plus";
@@ -26,6 +27,9 @@ request.interceptors.response.use((response) => {
     ElMessage.error(res.data.message);
 }, (error) => {
     const { message, response } = error;
+    if (response.status === 401) {
+        router.push({ path: '/login' })
+    }
     if (message.indexOf('timeout') != -1) {
         ElMessage.error('timeout！');
     } else if (message === 'Network error') {
