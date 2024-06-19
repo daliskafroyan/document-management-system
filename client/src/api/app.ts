@@ -49,3 +49,20 @@ export function getAllEagerSubjects() {
         method: 'GET',
     })
 }
+
+export type GetFolderDetailsResponse = {
+    id: number;
+    name: string;
+    subjectId: number | null;
+    records: {
+        id: number;
+        name: string;
+    }[];
+}
+
+export function getFolderDetails(id: number) {
+    return request<GetFolderDetailsResponse>({
+        url: `/api/folders/${id}`,
+        method: "GET",
+    });
+}

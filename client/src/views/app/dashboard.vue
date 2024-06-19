@@ -16,8 +16,8 @@
             </el-header>
             <el-main>
                 <el-table :data="tableData" border style="width: 100%">
-                    <el-table-column prop="createdAt" label="Date" width="180" />
-                    <el-table-column prop="address" label="Address" />
+                    <el-table-column prop="id" label="id" />
+                    <el-table-column prop="name" label="Record Name" width="180" />
                 </el-table>
             </el-main>
         </el-container>
@@ -28,13 +28,14 @@
 import type Node from 'element-plus/es/components/tree/src/model/node';
 import { ref, onMounted, toRaw } from 'vue';
 import { useRouter } from 'vue-router';
-import { getAllEagerSubjects, type GetAllEagerSubjectResponse } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, type GetAllEagerSubjectResponse } from '@/api/app';
 
 const router = useRouter();
 
 interface Tree {
     label: string;
     children?: Tree[];
+    id?: string
 }
 
 const treeData = ref<Tree[]>([]);
@@ -43,32 +44,46 @@ const defaultProps = {
     children: 'children',
 };
 
-const tableData = [
-    {
-        date: '2016-05-03',
-        name: 'Tom',
-        address: 'No. 189, Grove St, Los Angeles',
-    },
-    {
-        date: '2016-05-02',
-        name: 'Tom',
-        address: 'No. 189, Grove St, Los Angeles',
-    },
-    {
-        date: '2016-05-04',
-        name: 'Tom',
-        address: 'No. 189, Grove St, Los Angeles',
-    },
-    {
-        date: '2016-05-01',
-        name: 'Tom',
-        address: 'No. 189, Grove St, Los Angeles',
-    },
-]
+const tableData = ref<{ id: number, name: string }[]>([])
 
-const handleNodeClick = (data: Tree) => {
+// const tableData = [
+//     {
+//         date: '2016-05-03',
+//         name: 'Tom',
+//         address: 'No. 189, Grove St, Los Angeles',
+//     },
+//     {
+//         date: '2016-05-02',
+//         name: 'Tom',
+//         address: 'No. 189, Grove St, Los Angeles',
+//     },
+//     {
+//         date: '2016-05-04',
+//         name: 'Tom',
+//         address: 'No. 189, Grove St, Los Angeles',
+//     },
+//     {
+//         date: '2016-05-01',
+//         name: 'Tom',
+//         address: 'No. 189, Grove St, Los Angeles',
+//     },
+// ]
+
+const handleNodeClick = async (data: Tree) => {
     console.log(data);
+    if (data.id) {
+        try {
+            const response = await getFolderDetails(parseInt(data.id));
+            tableData.value = response.data.records.map(record => ({
+                id: record.id,
+                name: record.name,
+            }));
+        } catch (error) {
+            console.error('Failed to fetch subjects:', error);
+        }
+    }
 };
+
 
 const mapNode = (node: GetAllEagerSubjectResponse): Tree => {
     const children: Tree[] = [];
