@@ -101,6 +101,12 @@ export function postNewFolder(data: PostNewFolder) {
     })
 }
 
+export function deleteFolder(id: number) {
+    return request({
+        url: `api/folders/${id}`,
+        method: 'DELETE',
+    })
+}
 
 export type PostNewSubject = {
     parentSubjectId?: number;

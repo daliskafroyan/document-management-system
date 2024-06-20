@@ -40,6 +40,16 @@
             <Button label="Save" @click="saveNewFolder" />
         </template>
     </Dialog>
+    <Dialog v-model:visible="isDeleteFolderDialogOpened" :style="{ width: '450px' }" header="Confirm" :modal="true">
+        <div class="flex items-center gap-4">
+            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <span v-if="folder">Are you sure you want to delete <b>{{ folder.name }}</b>?</span>
+        </div>
+        <template #footer>
+            <Button label="No" text @click="closeDeleteFolderDialog" />
+            <Button label="Yes" @click="confirmDeleteFolder" />
+        </template>
+    </Dialog>
 
 
     <Dialog v-model:visible="isAddSubjectDialogOpened" :style="{ width: '450px' }" header="Add Subject" :modal="true">
@@ -57,8 +67,6 @@
             <Button label="Save" @click="saveNewSubject" />
         </template>
     </Dialog>
-
-
     <Dialog v-model:visible="isEditSubjectDialogOpened" :style="{ width: '450px' }" header="Edit Subject" :modal="true">
         <div class="flex flex-col gap-6 p-fluid">
             <div>
@@ -72,6 +80,16 @@
         <template #footer>
             <Button label="Cancel" text @click="closeEditSubjectDialog" />
             <Button label="Save" @click="saveEditedSubject" />
+        </template>
+    </Dialog>
+    <Dialog v-model:visible="isDeleteSubjectDialogOpened" :style="{ width: '450px' }" header="Confirm" :modal="true">
+        <div class="flex items-center gap-4">
+            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <span v-if="folder">Are you sure you want to delete <b>{{ subject.name }}</b>?</span>
+        </div>
+        <template #footer>
+            <Button label="No" text @click="closeDeleteSubjectDialog" />
+            <Button label="Yes" @click="confirmDeleteSubject" />
         </template>
     </Dialog>
     <div class="app-viewport inspect_">
@@ -142,7 +160,7 @@
                         <i class="pi pi-pencil" />
                         <i class="pi pi-folder" />
                     </Button>
-                    <Button type="button" label="Delete Folder" severity="danger">
+                    <Button type="button" label="Delete Folder" @click="deleteFolder" severity="danger">
                         <i class="pi pi-trash" />
                         <i class="pi pi-folder" />
                     </Button>
@@ -162,7 +180,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast()
@@ -219,8 +237,8 @@ const confirmDeleteRecord = () => {
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Record Success', life: 3000 });
             record.value = { id: 0, name: '' };
 
+            isDeleteRecordDialogOpened.value = false;
             getFolderDetails(selectedEntity.value.id);
-            isEditRecordDialogOpened.value = false;
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Delete Record Error', life: 3000 });
@@ -252,14 +270,26 @@ const addFolder = () => {
     folder.value.subjectId = selectedEntity.value.id
 };
 
+const deleteFolder = () => {
+    isDeleteFolderDialogOpened.value = true;
+    folder.value.id = selectedEntity.value.id
+    folder.value.name = selectedEntity.value.label
+};
+
 const submittedFolder = ref(false);
 
 const isAddFolderDialogOpened = ref(false);
+const isDeleteFolderDialogOpened = ref(false);
 
-const folder = ref<{ subjectId: number | null, name: string | null }>({ subjectId: null, name: null })
+const folder = ref<{ subjectId: number | null, name: string | null, id: number | null }>({ subjectId: null, name: null, id: null })
 
 const closeAddFolderDialog = () => {
     isAddFolderDialogOpened.value = false;
+    submittedFolder.value = false;
+};
+
+const closeDeleteFolderDialog = () => {
+    isDeleteFolderDialogOpened.value = false;
     submittedFolder.value = false;
 };
 
@@ -278,6 +308,25 @@ const saveNewFolder = () => {
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Folder Error', life: 3000 });
+        });
+};
+
+const confirmDeleteFolder = () => {
+    submittedFolder.value = true;
+    if (!folder.value.id) return
+
+    APIDeleteFolder(folder.value.id)
+        .then(() => {
+            if (selectedEntity.value.id === null) return
+
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Folder Success', life: 3000 });
+            record.value = { id: 0, name: '' };
+
+            isDeleteFolderDialogOpened.value = false;
+            fetchAndConvertSubjects();
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Delete Folder Error', life: 3000 });
         });
 };
 // end folder
@@ -388,19 +437,6 @@ const onNodeSelect = async (node: any) => {
         selectedEntity.value.type = 'folder'
 
         fetchFolderDetails(parseInt(node.data))
-
-        // try {
-        //     const response = await getFolderDetails(parseInt(node.data));
-        //     const val = response.data.records.map(record => ({
-        //         id: record.id,
-        //         name: record.name,
-        //     }));
-
-        //     tableData.value = val
-
-        // } catch (error) {
-        //     console.error('Failed to fetch subjects:', error);
-        // }
     }
     else if (isSubject(node.icon)) {
         selectedEntity.value.type = 'subject'
