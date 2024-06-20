@@ -67,6 +67,19 @@ export function getFolderDetails(id: number) {
     });
 }
 
+export type PostNewRecord = {
+    folderId: number;
+    name: string;
+}
+
+export function postNewRecord(data: PostNewRecord) {
+    return request({
+        url: `api/records`,
+        method: 'POST',
+        data
+    })
+}
+
 export type PutEditRecord = {
     id: number;
     name: string;

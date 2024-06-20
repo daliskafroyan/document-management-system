@@ -1,4 +1,20 @@
 <template>
+
+    <Dialog v-model:visible="isAddRecordDialogOpened" :style="{ width: '450px' }" header="Add Record" :modal="true">
+        <div class="flex flex-col gap-6 p-fluid">
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="record.name" required="true" autofocus class="w-full"
+                    :invalid="submittedRecord && !record" />
+                <small v-if="submittedRecord && !record" class="text-red-500">Record name is required.</small>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" text @click="closeAddRecordDialog" />
+            <Button label="Save" @click="saveNewRecord" />
+        </template>
+    </Dialog>
     <Dialog v-model:visible="isEditRecordDialogOpened" :style="{ width: '450px' }" header="Edit Record" :modal="true">
         <div class="flex flex-col gap-6 p-fluid">
             <div>
@@ -11,7 +27,7 @@
 
         <template #footer>
             <Button label="Cancel" text @click="closeEditRecordDialog" />
-            <Button label="Save" @click="saveRecord" />
+            <Button label="Save" @click="saveEditedRecord" />
         </template>
     </Dialog>
     <Dialog v-model:visible="isDeleteRecordDialogOpened" :style="{ width: '450px' }" header="Confirm" :modal="true">
@@ -152,7 +168,7 @@
                     </Button>
                 </template>
                 <template v-if="selectedEntity.type === 'folder'">
-                    <Button type="button" label="Add Record">
+                    <Button type="button" label="Add Record" @click="addRecord">
                         <i class="pi pi-plus" />
                         <i class="pi pi-file" />
                     </Button>
@@ -180,7 +196,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder, deleteSubject as APIDeleteSubject } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder, deleteSubject as APIDeleteSubject, postNewRecord } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast()
@@ -207,20 +223,29 @@ interface TreeNode {
 }
 
 // record
+const addRecord = () => {
+    isAddRecordDialogOpened.value = true;
+    record.value.folderId = selectedEntity.value.id
+    record.value.name = selectedEntity.value.label
+};
 const editRecord = (prod: { id: number, name: string }) => {
-    record.value = prod;
+    record.value = { ...prod, folderId: null };
     isEditRecordDialogOpened.value = true;
 };
 const deleteRecord = (prod: { id: number, name: string }) => {
-    record.value = prod;
+    record.value = { ...prod, folderId: null };
     isDeleteRecordDialogOpened.value = true;
 };
-const saveRecord = () => {
+const saveEditedRecord = () => {
     submittedRecord.value = true;
-    putEditRecord(record.value)
+    if (!record.value.id || !record.value.name) return
+
+    putEditRecord({
+        id: record.value.id,
+        name: record.value.name
+    })
         .then(() => {
             toast.add({ severity: 'success', summary: 'Success', detail: 'Edit Record Success', life: 3000 });
-            record.value = { id: 0, name: '' };
             isEditRecordDialogOpened.value = false;
         })
         .catch((error) => {
@@ -228,14 +253,34 @@ const saveRecord = () => {
         });
 };
 
+const saveNewRecord = () => {
+    submittedRecord.value = true;
+    if (!record.value.folderId || !record.value.name) return
+
+    postNewRecord({
+        folderId: record.value.folderId,
+        name: record.value.name
+    })
+        .then(() => {
+            fetchAndConvertSubjects();
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Add Record Success', life: 3000 });
+            isAddRecordDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Add Record Error', life: 3000 });
+        });
+};
+
+
 const confirmDeleteRecord = () => {
     submittedRecord.value = true;
+    if (!record.value.id) return
     APIDeleteRecord(record.value.id)
         .then(() => {
             if (selectedEntity.value.id === null) return
 
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Record Success', life: 3000 });
-            record.value = { id: 0, name: '' };
+            record.value = { id: null, name: null, folderId: null };
 
             isDeleteRecordDialogOpened.value = false;
             getFolderDetails(selectedEntity.value.id);
@@ -255,10 +300,16 @@ const closeDeleteRecordDialog = () => {
     submittedRecord.value = false;
 };
 
+const closeAddRecordDialog = () => {
+    isAddRecordDialogOpened.value = false;
+    submittedRecord.value = false;
+};
+
+const isAddRecordDialogOpened = ref(false);
 const isEditRecordDialogOpened = ref(false);
 const isDeleteRecordDialogOpened = ref(false);
 
-const record = ref<{ id: number, name: string }>({ id: 0, name: '' });
+const record = ref<{ id: number | null, name: string | null, folderId: number | null }>({ id: null, name: null, folderId: null });
 const submittedRecord = ref(false);
 
 // end record
@@ -318,7 +369,7 @@ const confirmDeleteFolder = () => {
     APIDeleteFolder(folder.value.id)
         .then(() => {
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Folder Success', life: 3000 });
-            record.value = { id: 0, name: '' };
+            record.value = { id: null, name: null, folderId: null };
 
             isDeleteFolderDialogOpened.value = false;
             fetchAndConvertSubjects();
