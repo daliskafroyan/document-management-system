@@ -79,3 +79,33 @@ export function putEditRecord(data: PutEditRecord) {
         data
     })
 }
+
+
+export type PostNewFolder = {
+    subjectId: number;
+    name: string;
+}
+
+export function postNewFolder(data: PostNewFolder) {
+    return request({
+        url: `api/folders`,
+        method: 'POST',
+        data
+    })
+}
+
+
+export type PostNewSubject = {
+    parentSubjectId?: number;
+    name: string;
+}
+
+export function postNewSubject(data: PostNewSubject) {
+    return request({
+        url: `api/subjects`,
+        method: 'POST',
+        data
+    })
+}
+
+

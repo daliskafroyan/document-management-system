@@ -14,6 +14,39 @@
             <Button label="Save" @click="saveRecord" />
         </template>
     </Dialog>
+
+    <Dialog v-model:visible="isAddFolderDialogOpened" :style="{ width: '450px' }" header="Add Folder" :modal="true">
+        <div class="flex flex-col gap-6 p-fluid">
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="folder.name" required="true" autofocus class="w-full"
+                    :invalid="submittedFolder && !folder" />
+                <small v-if="submittedFolder && !folder" class="text-red-500">Folder name is required.</small>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" text @click="closeAddFolderDialog" />
+            <Button label="Save" @click="saveNewFolder" />
+        </template>
+    </Dialog>
+
+
+    <Dialog v-model:visible="isAddSubjectDialogOpened" :style="{ width: '450px' }" header="Add Subject" :modal="true">
+        <div class="flex flex-col gap-6 p-fluid">
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="subject.name" required="true" autofocus class="w-full"
+                    :invalid="submittedSubject && !subject" />
+                <small v-if="submittedSubject && !subject" class="text-red-500">Subject name is required.</small>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" text @click="closeAddSubjectDialog" />
+            <Button label="Save" @click="saveNewSubject" />
+        </template>
+    </Dialog>
     <div class="app-viewport inspect_">
 
         <!-- app-header -->
@@ -48,9 +81,50 @@
 
         <!-- app-sidebar -->
         <div class="app-sidebar">
+            <div class="flex justify-content-end pt-3 pr-3 gap-1">
+                <template v-if="selectedEntity.type === null">
+                    <Button type="button" label="Add Subject">
+                        <i class="pi pi-plus" />
+                        <i class="pi pi-box" />
+                    </Button>
+                </template>
+                <template v-if="selectedEntity.type === 'subject'">
+                    <Button type="button" label="Add Subject" @click="addSubject">
+                        <i class="pi pi-plus" />
+                        <i class="pi pi-box" />
+                    </Button>
+                    <Button type="button" label="Add Folder" @click="addFolder">
+                        <i class="pi pi-plus" />
+                        <i class="pi pi-folder" />
+                    </Button>
+                    <Button type="button" label="Edit Subject" severity="warn">
+                        <i class="pi pi-pencil" />
+                        <i class="pi pi-box" />
+                    </Button>
+                    <Button type="button" label="Delete Subject" severity="danger">
+                        <i class="pi pi-trash" />
+                        <i class="pi pi-box" />
+                    </Button>
+                </template>
+                <template v-if="selectedEntity.type === 'folder'">
+                    <Button type="button" label="Add Record">
+                        <i class="pi pi-plus" />
+                        <i class="pi pi-file" />
+                    </Button>
+                    <Button type="button" label="Edit Folder" severity="warn">
+                        <i class="pi pi-pencil" />
+                        <i class="pi pi-folder" />
+                    </Button>
+                    <Button type="button" label="Delete Folder" severity="danger">
+                        <i class="pi pi-trash" />
+                        <i class="pi pi-folder" />
+                    </Button>
+                </template>
+
+            </div>
             <div class="card flex justify-center">
-                <Tree @nodeSelect="onNodeSelect" v-model:selectionKeys="selectedKey" selectionMode="single"
-                    :value="nodes" class="w-full md:w-[30rem]"></Tree>
+                <Tree @nodeUnselect="onNodeUnselect" @nodeSelect="onNodeSelect" v-model:selectionKeys="selectedKey"
+                    selectionMode="single" :value="nodes" class="w-full md:w-[30rem]"></Tree>
             </div>
 
         </div>
@@ -61,7 +135,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getAllEagerSubjects, getFolderDetails, putEditRecord, type GetAllEagerSubjectResponse } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, type GetAllEagerSubjectResponse } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast()
@@ -87,6 +161,7 @@ interface TreeNode {
     children: TreeNode[];
 }
 
+// record
 const editRecord = (prod: { id: number, name: string }) => {
     record.value = prod;
     isEditRecordDialogOpened.value = true;
@@ -114,19 +189,117 @@ const closeEditRecordDialog = () => {
 };
 
 const isEditRecordDialogOpened = ref(false);
+
 const record = ref<{ id: number, name: string }>({ id: 0, name: '' });
 const submittedRecord = ref(false);
+
+// end record
+
+
+// folder
+const addFolder = () => {
+    isAddFolderDialogOpened.value = true;
+    folder.value.subjectId = selectedEntity.value.id
+};
+
+const submittedFolder = ref(false);
+
+const isAddFolderDialogOpened = ref(false);
+
+const folder = ref<{ subjectId: number | null, name: string | null }>({ subjectId: null, name: null })
+
+const closeAddFolderDialog = () => {
+    isAddFolderDialogOpened.value = false;
+    submittedFolder.value = false;
+};
+
+const saveNewFolder = () => {
+    submittedFolder.value = true;
+    if (!folder.value.subjectId || !folder.value.name) return
+
+    postNewFolder({
+        subjectId: folder.value.subjectId,
+        name: folder.value.name
+    })
+        .then(() => {
+            fetchAndConvertSubjects();
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Add Folder Success', life: 3000 });
+            isAddFolderDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Add Folder Error', life: 3000 });
+        });
+};
+// end folder
+
+// subject
+const addSubject = () => {
+    isAddSubjectDialogOpened.value = true;
+    subject.value.subjectId = selectedEntity.value.id
+};
+
+const submittedSubject = ref(false);
+
+const isAddSubjectDialogOpened = ref(false);
+
+const subject = ref<{ subjectId: number | null, name: string | null }>({ subjectId: null, name: null })
+
+const closeAddSubjectDialog = () => {
+    isAddSubjectDialogOpened.value = false;
+    submittedSubject.value = false;
+};
+
+const saveNewSubject = () => {
+    submittedSubject.value = true;
+    if (!subject.value.name) return
+
+    postNewSubject({
+        parentSubjectId: subject.value.subjectId ?? undefined,
+        name: subject.value.name
+    })
+        .then(() => {
+            fetchAndConvertSubjects();
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Add Subject Success', life: 3000 });
+            isAddSubjectDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Add Subject Error', life: 3000 });
+        });
+};
+// end folder
+
+
+
+
 const nodes = ref<TreeNode[]>([]);
 
 const tableData = ref<{ id: number; name: string }[]>([]);
 const selectedKey = ref(null);
+const selectedEntity = ref<{ type: 'folder' | 'subject' | null, id: number | null }>({
+    type: null,
+    id: null
+});
+
+const onNodeUnselect = () => {
+    selectedEntity.value.id = null
+    selectedEntity.value.type = null
+}
+
 
 const isFolder = (str: string): boolean => {
     return str.trim().endsWith('pi-folder');
 }
 
+const isSubject = (str: string): boolean => {
+    return str.trim().endsWith('pi-box');
+}
+
 const onNodeSelect = async (node: any) => {
+    selectedEntity.value.id = node.data
+    console.log('#debug selected en', node)
+
     if (isFolder(node.icon)) {
+        selectedEntity.value.type = 'folder'
         try {
             const response = await getFolderDetails(parseInt(node.data));
             const val = response.data.records.map(record => ({
@@ -139,7 +312,10 @@ const onNodeSelect = async (node: any) => {
         } catch (error) {
             console.error('Failed to fetch subjects:', error);
         }
-    } else {
+    }
+    else if (isSubject(node.icon)) {
+        selectedEntity.value.type = 'subject'
+
         tableData.value = []
     }
 };
@@ -175,14 +351,19 @@ const convertToTreeNodes = (subjects: Subject[]): TreeNode[] => {
     return subjects.map(subject => buildTree(subject, ''));
 }
 
-
-onMounted(async () => {
+const fetchAndConvertSubjects = async () => {
     try {
         const response = await getAllEagerSubjects();
-        nodes.value = convertToTreeNodes(response.data)
+        nodes.value = convertToTreeNodes(response.data);
     } catch (error) {
         console.error('Failed to fetch subjects:', error);
     }
+}
+
+
+
+onMounted(async () => {
+    await fetchAndConvertSubjects();
 });
 
 
@@ -257,7 +438,7 @@ const logout = () => {
 }
 
 .app-sidebar {
-    display: grid;
+    /* display: grid; */
     grid-area: AppSidebar;
     margin-top: var(--app-header-height);
     overflow: auto;
