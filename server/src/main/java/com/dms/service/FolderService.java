@@ -55,11 +55,7 @@ public class FolderService {
 
     public Folder updateFolder(UpdateFolderRequest updateFolderRequest) {
         Folder folder = validateAndGetFolder(updateFolderRequest.getId());
-        Subject subject = subjectService.validateAndGetSubject(String.valueOf(updateFolderRequest.getSubjectId()));
-
         folder.setName(updateFolderRequest.getName());
-        folder.setSubject(subject);
-
         return folderRepository.save(folder);
     }
 

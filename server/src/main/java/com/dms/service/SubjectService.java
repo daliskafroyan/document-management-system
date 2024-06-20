@@ -60,20 +60,7 @@ public class SubjectService {
 
     public Subject updateSubject(UpdateSubjectRequest updateSubjectRequest) {
         Subject subject = validateAndGetSubject(updateSubjectRequest.getId().toString());
-
-        Subject parentSubject = null;
-        if (updateSubjectRequest.getParentSubjectId() != null) {
-            Optional<Subject> optionalParentSubject = subjectRepository.findById(String.valueOf(updateSubjectRequest.getParentSubjectId()));
-            if (optionalParentSubject.isPresent()) {
-                parentSubject = optionalParentSubject.get();
-            } else {
-                throw new IllegalArgumentException("Parent subject not found");
-            }
-        }
-
         subject.setName(updateSubjectRequest.getName());
-        subject.setParentSubject(parentSubject);
-
         return subjectRepository.save(subject);
     }
 }

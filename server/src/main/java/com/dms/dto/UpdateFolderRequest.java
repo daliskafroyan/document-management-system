@@ -10,7 +10,4 @@ public class UpdateFolderRequest {
 
     @NotNull
     private String name;
-
-    @NotNull
-    private Long subjectId;
 }

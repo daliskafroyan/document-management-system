@@ -121,6 +121,19 @@ export function deleteFolder(id: number) {
     })
 }
 
+export type PutEditFolder = {
+    id: number;
+    name: string;
+}
+
+export function putEditFolder(data: PutEditFolder) {
+    return request({
+        url: `api/folders/${data.id}`,
+        method: 'PUT',
+        data
+    })
+}
+
 export type PostNewSubject = {
     parentSubjectId?: number;
     name: string;
@@ -135,13 +148,13 @@ export function postNewSubject(data: PostNewSubject) {
 }
 
 export type PutEditSubject = {
-    subjectId: number;
+    id: number;
     name: string;
 }
 
 export function putEditSubject(data: PutEditSubject) {
     return request({
-        url: `api/subjects`,
+        url: `api/subjects/${data.id}`,
         method: 'PUT',
         data
     })

@@ -10,6 +10,4 @@ public class UpdateSubjectRequest {
 
     @NotNull
     private String name;
-
-    private Long parentSubjectId;
 }

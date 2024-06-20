@@ -56,6 +56,21 @@
             <Button label="Save" @click="saveNewFolder" />
         </template>
     </Dialog>
+    <Dialog v-model:visible="isEditFolderDialogOpened" :style="{ width: '450px' }" header="Edit Folder" :modal="true">
+        <div class="flex flex-col gap-6 p-fluid">
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="folder.name" required="true" autofocus class="w-full"
+                    :invalid="submittedFolder && !folder" />
+                <small v-if="submittedFolder && !folder" class="text-red-500">Folder Name is required.</small>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" text @click="closeEditFolderDialog" />
+            <Button label="Save" @click="saveEditedFolder" />
+        </template>
+    </Dialog>
     <Dialog v-model:visible="isDeleteFolderDialogOpened" :style="{ width: '450px' }" header="Confirm" :modal="true">
         <div class="flex items-center gap-4">
             <i class="pi pi-exclamation-triangle !text-3xl" />
@@ -172,7 +187,7 @@
                         <i class="pi pi-plus" />
                         <i class="pi pi-file" />
                     </Button>
-                    <Button type="button" label="Edit Folder" severity="warn">
+                    <Button type="button" label="Edit Folder" @click="editFolder" severity="warn">
                         <i class="pi pi-pencil" />
                         <i class="pi pi-folder" />
                     </Button>
@@ -196,7 +211,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder, deleteSubject as APIDeleteSubject, postNewRecord } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder, deleteSubject as APIDeleteSubject, postNewRecord, putEditFolder } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast()
@@ -321,6 +336,12 @@ const addFolder = () => {
     folder.value.subjectId = selectedEntity.value.id
 };
 
+const editFolder = () => {
+    isEditFolderDialogOpened.value = true;
+    folder.value.id = selectedEntity.value.id
+    folder.value.name = selectedEntity.value.label
+};
+
 const deleteFolder = () => {
     isDeleteFolderDialogOpened.value = true;
     folder.value.id = selectedEntity.value.id
@@ -330,12 +351,18 @@ const deleteFolder = () => {
 const submittedFolder = ref(false);
 
 const isAddFolderDialogOpened = ref(false);
+const isEditFolderDialogOpened = ref(false);
 const isDeleteFolderDialogOpened = ref(false);
 
 const folder = ref<{ subjectId: number | null, name: string | null, id: number | null }>({ subjectId: null, name: null, id: null })
 
 const closeAddFolderDialog = () => {
     isAddFolderDialogOpened.value = false;
+    submittedFolder.value = false;
+};
+
+const closeEditFolderDialog = () => {
+    isEditFolderDialogOpened.value = false;
     submittedFolder.value = false;
 };
 
@@ -359,6 +386,24 @@ const saveNewFolder = () => {
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Folder Error', life: 3000 });
+        });
+};
+
+const saveEditedFolder = () => {
+    submittedFolder.value = true;
+    if (!folder.value.name || !folder.value.id) return
+
+    putEditFolder({
+        id: folder.value.id,
+        name: folder.value.name
+    })
+        .then(() => {
+            fetchAndConvertSubjects();
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Edit Folder Success', life: 3000 });
+            isEditFolderDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Edit Folder Error', life: 3000 });
         });
 };
 
@@ -461,13 +506,13 @@ const saveEditedSubject = () => {
     if (!subject.value.name || !subject.value.subjectId) return
 
     putEditSubject({
-        subjectId: subject.value.subjectId,
+        id: subject.value.subjectId,
         name: subject.value.name
     })
         .then(() => {
             fetchAndConvertSubjects();
             toast.add({ severity: 'success', summary: 'Success', detail: 'Add Subject Success', life: 3000 });
-            isAddSubjectDialogOpened.value = false;
+            isEditSubjectDialogOpened.value = false;
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Subject Error', life: 3000 });
