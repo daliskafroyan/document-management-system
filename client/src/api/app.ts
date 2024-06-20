@@ -134,3 +134,10 @@ export function putEditSubject(data: PutEditSubject) {
     })
 }
 
+export function deleteSubject(id: number) {
+    return request({
+        url: `api/subjects/${id}`,
+        method: 'DELETE',
+    })
+}
+

@@ -146,7 +146,7 @@
                         <i class="pi pi-pencil" />
                         <i class="pi pi-box" />
                     </Button>
-                    <Button type="button" label="Delete Subject" severity="danger">
+                    <Button type="button" label="Delete Subject" @click="deleteSubject" severity="danger">
                         <i class="pi pi-trash" />
                         <i class="pi pi-box" />
                     </Button>
@@ -180,7 +180,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder, deleteSubject as APIDeleteSubject } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast()
@@ -317,8 +317,6 @@ const confirmDeleteFolder = () => {
 
     APIDeleteFolder(folder.value.id)
         .then(() => {
-            if (selectedEntity.value.id === null) return
-
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Folder Success', life: 3000 });
             record.value = { id: 0, name: '' };
 
@@ -337,14 +335,26 @@ const addSubject = () => {
     subject.value.subjectId = selectedEntity.value.id
 };
 
+const deleteSubject = () => {
+    isDeleteSubjectDialogOpened.value = true;
+    subject.value.id = selectedEntity.value.id
+    subject.value.name = selectedEntity.value.label
+};
+
 const submittedSubject = ref(false);
 
 const isAddSubjectDialogOpened = ref(false);
+const isDeleteSubjectDialogOpened = ref(false);
 
-const subject = ref<{ subjectId: number | null, name: string | null }>({ subjectId: null, name: null })
+const subject = ref<{ subjectId: number | null, name: string | null, id: number | null }>({ subjectId: null, name: null, id: null })
 
 const closeAddSubjectDialog = () => {
     isAddSubjectDialogOpened.value = false;
+    submittedSubject.value = false;
+};
+
+const closeDeleteSubjectDialog = () => {
+    isDeleteSubjectDialogOpened.value = false;
     submittedSubject.value = false;
 };
 
@@ -363,6 +373,22 @@ const saveNewSubject = () => {
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Subject Error', life: 3000 });
+        });
+};
+
+const confirmDeleteSubject = () => {
+    submittedSubject.value = true;
+    if (!subject.value.id) return
+
+    APIDeleteSubject(subject.value.id)
+        .then(() => {
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Subject Success', life: 3000 });
+
+            isDeleteSubjectDialogOpened.value = false;
+            fetchAndConvertSubjects();
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Delete Subject Error', life: 3000 });
         });
 };
 
