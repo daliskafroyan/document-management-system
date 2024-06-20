@@ -80,6 +80,13 @@ export function putEditRecord(data: PutEditRecord) {
     })
 }
 
+export function deleteRecord(id: number) {
+    return request({
+        url: `api/records/${id}`,
+        method: 'DELETE',
+    })
+}
+
 
 export type PostNewFolder = {
     subjectId: number;
@@ -108,4 +115,16 @@ export function postNewSubject(data: PostNewSubject) {
     })
 }
 
+export type PutEditSubject = {
+    subjectId: number;
+    name: string;
+}
+
+export function putEditSubject(data: PutEditSubject) {
+    return request({
+        url: `api/subjects`,
+        method: 'PUT',
+        data
+    })
+}
 

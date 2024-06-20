@@ -14,6 +14,16 @@
             <Button label="Save" @click="saveRecord" />
         </template>
     </Dialog>
+    <Dialog v-model:visible="isDeleteRecordDialogOpened" :style="{ width: '450px' }" header="Confirm" :modal="true">
+        <div class="flex items-center gap-4">
+            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <span v-if="record">Are you sure you want to delete <b>{{ record.name }}</b>?</span>
+        </div>
+        <template #footer>
+            <Button label="No" text @click="closeDeleteRecordDialog" />
+            <Button label="Yes" @click="confirmDeleteRecord" />
+        </template>
+    </Dialog>
 
     <Dialog v-model:visible="isAddFolderDialogOpened" :style="{ width: '450px' }" header="Add Folder" :modal="true">
         <div class="flex flex-col gap-6 p-fluid">
@@ -47,6 +57,23 @@
             <Button label="Save" @click="saveNewSubject" />
         </template>
     </Dialog>
+
+
+    <Dialog v-model:visible="isEditSubjectDialogOpened" :style="{ width: '450px' }" header="Edit Subject" :modal="true">
+        <div class="flex flex-col gap-6 p-fluid">
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="subject.name" required="true" autofocus class="w-full"
+                    :invalid="submittedSubject && !subject" />
+                <small v-if="submittedSubject && !subject" class="text-red-500">Subject name is required.</small>
+            </div>
+        </div>
+
+        <template #footer>
+            <Button label="Cancel" text @click="closeEditSubjectDialog" />
+            <Button label="Save" @click="saveEditedSubject" />
+        </template>
+    </Dialog>
     <div class="app-viewport inspect_">
 
         <!-- app-header -->
@@ -71,7 +98,7 @@
                     <template #body="slotProps">
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editRecord(slotProps.data)" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger"
-                            @click="confirmDeleteRecord(slotProps.data)" />
+                            @click="deleteRecord(slotProps.data)" />
                     </template>
                 </Column>
             </DataTable>
@@ -83,7 +110,7 @@
         <div class="app-sidebar">
             <div class="flex justify-content-end pt-3 pr-3 gap-1">
                 <template v-if="selectedEntity.type === null">
-                    <Button type="button" label="Add Subject">
+                    <Button type="button" label="Add Subject" @click="addSubject">
                         <i class="pi pi-plus" />
                         <i class="pi pi-box" />
                     </Button>
@@ -97,7 +124,7 @@
                         <i class="pi pi-plus" />
                         <i class="pi pi-folder" />
                     </Button>
-                    <Button type="button" label="Edit Subject" severity="warn">
+                    <Button type="button" label="Edit Subject" @click="editSubject" severity="warn">
                         <i class="pi pi-pencil" />
                         <i class="pi pi-box" />
                     </Button>
@@ -135,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, type GetAllEagerSubjectResponse } from '@/api/app';
+import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast()
@@ -166,9 +193,9 @@ const editRecord = (prod: { id: number, name: string }) => {
     record.value = prod;
     isEditRecordDialogOpened.value = true;
 };
-const confirmDeleteRecord = (prod) => {
-    // product.value = prod;
-    // deleteProductDialog.value = true;
+const deleteRecord = (prod: { id: number, name: string }) => {
+    record.value = prod;
+    isDeleteRecordDialogOpened.value = true;
 };
 const saveRecord = () => {
     submittedRecord.value = true;
@@ -183,12 +210,35 @@ const saveRecord = () => {
         });
 };
 
+const confirmDeleteRecord = () => {
+    submittedRecord.value = true;
+    APIDeleteRecord(record.value.id)
+        .then(() => {
+            if (selectedEntity.value.id === null) return
+
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Record Success', life: 3000 });
+            record.value = { id: 0, name: '' };
+
+            getFolderDetails(selectedEntity.value.id);
+            isEditRecordDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Delete Record Error', life: 3000 });
+        });
+};
+
 const closeEditRecordDialog = () => {
     isEditRecordDialogOpened.value = false;
     submittedRecord.value = false;
 };
 
+const closeDeleteRecordDialog = () => {
+    isDeleteRecordDialogOpened.value = false;
+    submittedRecord.value = false;
+};
+
 const isEditRecordDialogOpened = ref(false);
+const isDeleteRecordDialogOpened = ref(false);
 
 const record = ref<{ id: number, name: string }>({ id: 0, name: '' });
 const submittedRecord = ref(false);
@@ -266,7 +316,40 @@ const saveNewSubject = () => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Subject Error', life: 3000 });
         });
 };
-// end folder
+
+const editSubject = () => {
+    isEditSubjectDialogOpened.value = true;
+    subject.value.subjectId = selectedEntity.value.id
+    subject.value.name = selectedEntity.value.label
+};
+
+const isEditSubjectDialogOpened = ref(false);
+
+const closeEditSubjectDialog = () => {
+    isEditSubjectDialogOpened.value = false;
+    submittedSubject.value = false;
+};
+
+const saveEditedSubject = () => {
+    submittedSubject.value = true;
+    if (!subject.value.name || !subject.value.subjectId) return
+
+    putEditSubject({
+        subjectId: subject.value.subjectId,
+        name: subject.value.name
+    })
+        .then(() => {
+            fetchAndConvertSubjects();
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Add Subject Success', life: 3000 });
+            isAddSubjectDialogOpened.value = false;
+        })
+        .catch((error) => {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Add Subject Error', life: 3000 });
+        });
+};
+// TODO: CHANGE THE PAYLOAD
+
+// end subject
 
 
 
@@ -275,9 +358,10 @@ const nodes = ref<TreeNode[]>([]);
 
 const tableData = ref<{ id: number; name: string }[]>([]);
 const selectedKey = ref(null);
-const selectedEntity = ref<{ type: 'folder' | 'subject' | null, id: number | null }>({
+const selectedEntity = ref<{ type: 'folder' | 'subject' | null, id: number | null, label: string | null }>({
     type: null,
-    id: null
+    id: null,
+    label: null
 });
 
 const onNodeUnselect = () => {
@@ -296,22 +380,27 @@ const isSubject = (str: string): boolean => {
 
 const onNodeSelect = async (node: any) => {
     selectedEntity.value.id = node.data
+    selectedEntity.value.label = node.label
+
     console.log('#debug selected en', node)
 
     if (isFolder(node.icon)) {
         selectedEntity.value.type = 'folder'
-        try {
-            const response = await getFolderDetails(parseInt(node.data));
-            const val = response.data.records.map(record => ({
-                id: record.id,
-                name: record.name,
-            }));
 
-            tableData.value = val
+        fetchFolderDetails(parseInt(node.data))
 
-        } catch (error) {
-            console.error('Failed to fetch subjects:', error);
-        }
+        // try {
+        //     const response = await getFolderDetails(parseInt(node.data));
+        //     const val = response.data.records.map(record => ({
+        //         id: record.id,
+        //         name: record.name,
+        //     }));
+
+        //     tableData.value = val
+
+        // } catch (error) {
+        //     console.error('Failed to fetch subjects:', error);
+        // }
     }
     else if (isSubject(node.icon)) {
         selectedEntity.value.type = 'subject'
@@ -360,6 +449,20 @@ const fetchAndConvertSubjects = async () => {
     }
 }
 
+const fetchFolderDetails = async (id: number) => {
+    try {
+        const response = await getFolderDetails(id);
+        const val = response.data.records.map(record => ({
+            id: record.id,
+            name: record.name,
+        }));
+
+        tableData.value = val
+
+    } catch (error) {
+        console.error('Failed to fetch subjects:', error);
+    }
+}
 
 
 onMounted(async () => {
