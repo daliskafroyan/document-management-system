@@ -241,7 +241,7 @@ interface TreeNode {
 const addRecord = () => {
     isAddRecordDialogOpened.value = true;
     record.value.folderId = selectedEntity.value.id
-    record.value.name = selectedEntity.value.label
+    // record.value.name = selectedEntity.value.label
 };
 const editRecord = (prod: { id: number, name: string }) => {
     record.value = { ...prod, folderId: null };
@@ -260,8 +260,12 @@ const saveEditedRecord = () => {
         name: record.value.name
     })
         .then(() => {
+            if (!selectedEntity.value.id) return;
+
             toast.add({ severity: 'success', summary: 'Success', detail: 'Edit Record Success', life: 3000 });
             isEditRecordDialogOpened.value = false;
+            fetchFolderDetails(selectedEntity.value.id)
+            record.value = { id: null, name: null, folderId: null };
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Edit Record Error', life: 3000 });
@@ -277,9 +281,12 @@ const saveNewRecord = () => {
         name: record.value.name
     })
         .then(() => {
-            fetchAndConvertSubjects();
+            if (!record.value.folderId) return;
+
             toast.add({ severity: 'success', summary: 'Success', detail: 'Add Record Success', life: 3000 });
             isAddRecordDialogOpened.value = false;
+            fetchFolderDetails(record.value.folderId)
+            record.value = { id: null, name: null, folderId: null };
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Record Error', life: 3000 });
@@ -292,13 +299,12 @@ const confirmDeleteRecord = () => {
     if (!record.value.id) return
     APIDeleteRecord(record.value.id)
         .then(() => {
-            if (selectedEntity.value.id === null) return
+            if (!selectedEntity.value.id) return;
 
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Record Success', life: 3000 });
-            record.value = { id: null, name: null, folderId: null };
-
             isDeleteRecordDialogOpened.value = false;
-            getFolderDetails(selectedEntity.value.id);
+            fetchFolderDetails(selectedEntity.value.id)
+            record.value = { id: null, name: null, folderId: null };
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Delete Record Error', life: 3000 });
@@ -382,6 +388,8 @@ const saveNewFolder = () => {
         .then(() => {
             fetchAndConvertSubjects();
             toast.add({ severity: 'success', summary: 'Success', detail: 'Add Folder Success', life: 3000 });
+            folder.value = { subjectId: null, name: null, id: null };
+
             isAddFolderDialogOpened.value = false;
         })
         .catch((error) => {
@@ -400,6 +408,8 @@ const saveEditedFolder = () => {
         .then(() => {
             fetchAndConvertSubjects();
             toast.add({ severity: 'success', summary: 'Success', detail: 'Edit Folder Success', life: 3000 });
+            folder.value = { subjectId: null, name: null, id: null };
+
             isEditFolderDialogOpened.value = false;
         })
         .catch((error) => {
@@ -414,7 +424,7 @@ const confirmDeleteFolder = () => {
     APIDeleteFolder(folder.value.id)
         .then(() => {
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Folder Success', life: 3000 });
-            record.value = { id: null, name: null, folderId: null };
+            folder.value = { subjectId: null, name: null, id: null };
 
             isDeleteFolderDialogOpened.value = false;
             fetchAndConvertSubjects();
@@ -465,6 +475,7 @@ const saveNewSubject = () => {
         .then(() => {
             fetchAndConvertSubjects();
             toast.add({ severity: 'success', summary: 'Success', detail: 'Add Subject Success', life: 3000 });
+            subject.value = { subjectId: null, name: null, id: null }
             isAddSubjectDialogOpened.value = false;
         })
         .catch((error) => {
@@ -479,6 +490,7 @@ const confirmDeleteSubject = () => {
     APIDeleteSubject(subject.value.id)
         .then(() => {
             toast.add({ severity: 'success', summary: 'Success', detail: 'Delete Subject Success', life: 3000 });
+            subject.value = { subjectId: null, name: null, id: null }
 
             isDeleteSubjectDialogOpened.value = false;
             fetchAndConvertSubjects();
@@ -512,13 +524,13 @@ const saveEditedSubject = () => {
         .then(() => {
             fetchAndConvertSubjects();
             toast.add({ severity: 'success', summary: 'Success', detail: 'Add Subject Success', life: 3000 });
+            subject.value = { subjectId: null, name: null, id: null }
             isEditSubjectDialogOpened.value = false;
         })
         .catch((error) => {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Add Subject Error', life: 3000 });
         });
 };
-// TODO: CHANGE THE PAYLOAD
 
 // end subject
 
