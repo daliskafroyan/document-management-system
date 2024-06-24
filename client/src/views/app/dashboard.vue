@@ -1,5 +1,4 @@
 <template>
-
     <Dialog v-model:visible="isAddRecordDialogOpened" :style="{ width: '450px' }" header="Add Record" :modal="true">
         <div class="flex flex-col gap-6 p-fluid">
             <div>
@@ -213,6 +212,7 @@
 import { ref, onMounted } from 'vue';
 import { getAllEagerSubjects, getFolderDetails, postNewFolder, postNewSubject, putEditRecord, putEditSubject, type GetAllEagerSubjectResponse, deleteRecord as APIDeleteRecord, deleteFolder as APIDeleteFolder, deleteSubject as APIDeleteSubject, postNewRecord, putEditFolder } from '@/api/app';
 import { useToast } from 'primevue/usetoast';
+import router from '@/router';
 
 const toast = useToast()
 
@@ -642,6 +642,7 @@ onMounted(async () => {
 
 const logout = () => {
     localStorage.removeItem('token');
+    router.replace({ path: "/login" });
 };
 
 </script>
